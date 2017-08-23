@@ -266,7 +266,12 @@ public class UnsafeFixLengthColumnPage extends ColumnPage {
   }
 
   @Override
-  public byte[] getFlattenedBytePage() {
+  public byte[] getLVFlattenedBytePage() {
+    throw new UnsupportedOperationException("invalid data type: " + dataType);
+  }
+
+  @Override
+  public byte[] getDirectFlattenedBytePage() {
     throw new UnsupportedOperationException("invalid data type: " + dataType);
   }
 
@@ -342,6 +347,8 @@ public class UnsafeFixLengthColumnPage extends ColumnPage {
           codec.encode(i, CarbonUnsafe.getUnsafe().getShort(baseAddress, baseOffset + offset));
         }
         break;
+      case TIMESTAMP:
+      case DATE:
       case INT:
         for (int i = 0; i < pageSize; i++) {
           long offset = i << intBits;

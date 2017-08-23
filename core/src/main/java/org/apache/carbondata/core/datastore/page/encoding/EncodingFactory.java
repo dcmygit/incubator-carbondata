@@ -33,6 +33,8 @@ import org.apache.carbondata.core.datastore.page.encoding.adaptive.AdaptiveInteg
 import org.apache.carbondata.core.datastore.page.encoding.adaptive.AdaptiveIntegralEncoderMeta;
 import org.apache.carbondata.core.datastore.page.encoding.compress.DirectCompressCodec;
 import org.apache.carbondata.core.datastore.page.encoding.compress.DirectCompressorEncoderMeta;
+import org.apache.carbondata.core.datastore.page.encoding.directstring.DirectStringCodec;
+import org.apache.carbondata.core.datastore.page.encoding.directstring.DirectStringEncoderMeta;
 import org.apache.carbondata.core.datastore.page.encoding.rle.RLECodec;
 import org.apache.carbondata.core.datastore.page.encoding.rle.RLEEncoderMeta;
 import org.apache.carbondata.core.datastore.page.statistics.PrimitivePageStatsCollector;
@@ -45,12 +47,13 @@ import static org.apache.carbondata.format.Encoding.ADAPTIVE_DELTA_INTEGRAL;
 import static org.apache.carbondata.format.Encoding.ADAPTIVE_FLOATING;
 import static org.apache.carbondata.format.Encoding.ADAPTIVE_INTEGRAL;
 import static org.apache.carbondata.format.Encoding.DIRECT_COMPRESS;
+import static org.apache.carbondata.format.Encoding.DIRECT_STRING;
 import static org.apache.carbondata.format.Encoding.RLE_INTEGRAL;
 
 /**
  * Base class for encoding strategy implementation.
  */
-public abstract class EncodingStrategy {
+public abstract class EncodingFactory {
 
   /**
    * Return new encoder for specified column
@@ -95,6 +98,10 @@ public abstract class EncodingStrategy {
       SimpleStatsResult stats = PrimitivePageStatsCollector.newInstance(metadata);
       return new AdaptiveFloatingCodec(metadata.getDataType(), metadata.getTargetDataType(),
           stats).createDecoder(metadata);
+    } else if (encoding == DIRECT_STRING) {
+      DirectStringEncoderMeta metadata = new DirectStringEncoderMeta();
+      metadata.readFields(in);
+      return new DirectStringCodec().createDecoder(metadata);
     } else {
       // for backward compatibility
       ValueEncoderMeta metadata = CarbonUtil.deserializeEncoderMetaV3(encoderMeta);
@@ -112,7 +119,7 @@ public abstract class EncodingStrategy {
       case SHORT:
       case INT:
       case LONG:
-        return DefaultEncodingStrategy.selectCodecByAlgorithmForIntegral(stats).createDecoder(null);
+        return DefaultEncodingFactory.selectCodecByAlgorithmForIntegral(stats).createDecoder(null);
       case FLOAT:
       case DOUBLE:
         return DefaultEncodingStrategy.selectCodecByAlgorithmForFloating(stats).createDecoder(null);

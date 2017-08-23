@@ -19,6 +19,8 @@ package org.apache.carbondata.core.datastore.page;
 
 import java.math.BigDecimal;
 
+import org.apache.carbondata.core.metadata.datatype.DataType;
+
 /**
  * This is a decorator of column page, it performs decoding lazily (when caller calls getXXX
  * method to get the value from the page)
@@ -31,20 +33,42 @@ public class LazyColumnPage extends ColumnPage {
   // encode that will apply to page data in getXXX
   private ColumnPageValueConverter converter;
 
-  private LazyColumnPage(ColumnPage columnPage, ColumnPageValueConverter converter) {
-    super(columnPage.getDataType(), columnPage.getPageSize(), columnPage.scale,
+  private LazyColumnPage(DataType dataType, ColumnPage columnPage,
+      ColumnPageValueConverter converter) {
+    super(dataType, columnPage.getPageSize(), columnPage.scale,
         columnPage.precision);
     this.columnPage = columnPage;
     this.converter = converter;
   }
 
-  public static ColumnPage newPage(ColumnPage columnPage, ColumnPageValueConverter codec) {
-    return new LazyColumnPage(columnPage, codec);
+  public static ColumnPage newPage(DataType dataType, ColumnPage columnPage,
+      ColumnPageValueConverter codec) {
+    return new LazyColumnPage(dataType, columnPage, codec);
   }
 
   @Override
   public String toString() {
     return String.format("[converter: %s, data type: %s", converter, columnPage.getDataType());
+  }
+
+  @Override
+  public byte getByte(int rowId) {
+    return (byte) getLong(rowId);
+  }
+
+  @Override
+  public short getShort(int rowId) {
+    return (short) getLong(rowId);
+  }
+
+  @Override
+  public int getShortInt(int rowId) {
+    return (int) getLong(rowId);
+  }
+
+  @Override
+  public int getInt(int rowId) {
+    return (int) getLong(rowId);
   }
 
   @Override
@@ -56,6 +80,8 @@ public class LazyColumnPage extends ColumnPage {
         return converter.decodeLong(columnPage.getShort(rowId));
       case SHORT_INT:
         return converter.decodeLong(columnPage.getShortInt(rowId));
+      case TIMESTAMP:
+      case DATE:
       case INT:
         return converter.decodeLong(columnPage.getInt(rowId));
       case LONG:
@@ -74,6 +100,8 @@ public class LazyColumnPage extends ColumnPage {
         return converter.decodeDouble(columnPage.getShort(rowId));
       case SHORT_INT:
         return converter.decodeDouble(columnPage.getShortInt(rowId));
+      case TIMESTAMP:
+      case DATE:
       case INT:
         return converter.decodeDouble(columnPage.getInt(rowId));
       case LONG:
@@ -153,7 +181,12 @@ public class LazyColumnPage extends ColumnPage {
   }
 
   @Override
-  public byte[] getFlattenedBytePage() {
+  public byte[] getLVFlattenedBytePage() {
+    throw new UnsupportedOperationException("internal error");
+  }
+
+  @Override
+  public byte[] getDirectFlattenedBytePage() {
     throw new UnsupportedOperationException("internal error");
   }
 
@@ -244,26 +277,6 @@ public class LazyColumnPage extends ColumnPage {
 
   @Override
   public void putBytes(int rowId, byte[] bytes, int offset, int length) {
-    throw new UnsupportedOperationException("internal error");
-  }
-
-  @Override
-  public byte getByte(int rowId) {
-    throw new UnsupportedOperationException("internal error");
-  }
-
-  @Override
-  public short getShort(int rowId) {
-    throw new UnsupportedOperationException("internal error");
-  }
-
-  @Override
-  public int getShortInt(int rowId) {
-    throw new UnsupportedOperationException("internal error");
-  }
-
-  @Override
-  public int getInt(int rowId) {
     throw new UnsupportedOperationException("internal error");
   }
 }

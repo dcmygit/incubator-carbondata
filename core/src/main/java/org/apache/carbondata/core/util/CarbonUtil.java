@@ -2023,9 +2023,13 @@ public final class CarbonUtil {
       case BYTE_ARRAY:
         return (byte[]) value;
       case STRING:
+        return (byte[]) value;
       case TIMESTAMP:
       case DATE:
-        return (byte[]) value;
+        b = ByteBuffer.allocate(4);
+        b.putInt((int) value);
+        b.flip();
+        return b.array();
       default:
         throw new IllegalArgumentException("Invalid data type: " + dataType);
     }

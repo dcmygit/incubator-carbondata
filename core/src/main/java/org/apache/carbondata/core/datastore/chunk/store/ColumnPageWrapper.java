@@ -17,41 +17,160 @@
 
 package org.apache.carbondata.core.datastore.chunk.store;
 
+import java.nio.ByteBuffer;
+import java.util.BitSet;
+
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.chunk.DimensionColumnDataChunk;
 import org.apache.carbondata.core.datastore.page.ColumnPage;
+import org.apache.carbondata.core.keygenerator.directdictionary.DirectDictionaryGenerator;
+import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.scan.executor.infos.KeyStructureInfo;
+import org.apache.carbondata.core.scan.result.vector.CarbonColumnVector;
 import org.apache.carbondata.core.scan.result.vector.ColumnVectorInfo;
+import org.apache.carbondata.core.util.ByteUtil;
 
+/**
+ * ColumnPage wrapper for dimension column reader
+ */
 public class ColumnPageWrapper implements DimensionColumnDataChunk {
 
   private ColumnPage columnPage;
+  private int columnValueSize;
 
-  public ColumnPageWrapper(ColumnPage columnPage) {
+  public ColumnPageWrapper(ColumnPage columnPage, int columnValueSize) {
     this.columnPage = columnPage;
+    this.columnValueSize = columnValueSize;
   }
 
   @Override
   public int fillChunkData(byte[] data, int offset, int columnIndex,
       KeyStructureInfo restructuringInfo) {
-    throw new UnsupportedOperationException("internal error");
+    int surrogate = columnPage.getInt(columnIndex);
+    ByteBuffer buffer = ByteBuffer.wrap(data);
+    buffer.putInt(offset, surrogate);
+    return columnValueSize;
   }
 
   @Override
   public int fillConvertedChunkData(int rowId, int columnIndex, int[] row,
       KeyStructureInfo restructuringInfo) {
-    throw new UnsupportedOperationException("internal error");
+    row[columnIndex] = columnPage.getInt(rowId);
+    return columnIndex + 1;
   }
 
   @Override
   public int fillConvertedChunkData(ColumnVectorInfo[] vectorInfo, int column,
       KeyStructureInfo restructuringInfo) {
-    throw new UnsupportedOperationException("internal error");
+    // fill the vector with data in column page
+    ColumnVectorInfo columnVectorInfo = vectorInfo[column];
+    CarbonColumnVector vector = columnVectorInfo.vector;
+    int offsetRowId = columnVectorInfo.offset;
+    int vectorOffset = columnVectorInfo.vectorOffset;
+    int maxRowId = offsetRowId + columnVectorInfo.size;
+    BitSet nullBitset = columnPage.getNullBits();
+    switch (columnPage.getDataType()) {
+      case TIMESTAMP:
+      case DATE:
+        DirectDictionaryGenerator generator = columnVectorInfo.directDictionaryGenerator;
+        assert (generator != null);
+        DataType dataType = generator.getReturnType();
+        for (int rowId = offsetRowId; rowId < maxRowId; rowId++) {
+          if (nullBitset.get(rowId)) {
+            // means the data for this row is null
+            vector.putNull(vectorOffset++);
+          } else {
+            int surrogate = columnPage.getInt(rowId);
+            Object valueFromSurrogate = generator.getValueFromSurrogate(surrogate);
+            if (valueFromSurrogate == null) {
+              vector.putNull(vectorOffset++);
+            } else {
+              if (dataType == DataType.INT) {
+                vector.putInt(vectorOffset++, (int) valueFromSurrogate);
+              } else {
+                vector.putLong(vectorOffset++, (long) valueFromSurrogate);
+              }
+            }
+          }
+        }
+        break;
+      case STRING:
+        for (int rowId = offsetRowId; rowId < maxRowId; rowId++) {
+          if (nullBitset.get(rowId)) {
+            // means the data for this row is null
+            vector.putNull(vectorOffset++);
+          } else {
+            byte[] data = columnPage.getBytes(rowId);
+            if (ByteUtil.UnsafeComparer.INSTANCE
+                .equals(CarbonCommonConstants.MEMBER_DEFAULT_VAL_ARRAY, data)) {
+              vector.putNull(vectorOffset++);
+            } else {
+              vector.putBytes(vectorOffset++, 0, data.length, data);
+            }
+          }
+        }
+        break;
+      default:
+        throw new RuntimeException("unsupported data type: " + columnPage.getDataType());
+    }
+
+    return column + 1;
   }
 
   @Override
   public int fillConvertedChunkData(int[] rowMapping, ColumnVectorInfo[] vectorInfo, int column,
       KeyStructureInfo restructuringInfo) {
-    throw new UnsupportedOperationException("internal error");
+    ColumnVectorInfo columnVectorInfo = vectorInfo[column];
+    CarbonColumnVector vector = columnVectorInfo.vector;
+    int offsetRowId = columnVectorInfo.offset;
+    int vectorOffset = columnVectorInfo.vectorOffset;
+    int maxRowId = offsetRowId + columnVectorInfo.size;
+    BitSet nullBitset = columnPage.getNullBits();
+    switch (columnPage.getDataType()) {
+      case TIMESTAMP:
+      case DATE:
+        DirectDictionaryGenerator generator = columnVectorInfo.directDictionaryGenerator;
+        assert (generator != null);
+        DataType dataType = generator.getReturnType();
+        for (int rowId = offsetRowId; rowId < maxRowId; rowId++) {
+          if (nullBitset.get(rowMapping[rowId])) {
+            // means the data for this row is null
+            vector.putNull(vectorOffset++);
+          } else {
+            int surrogate = columnPage.getInt(rowMapping[rowId]);
+            Object valueFromSurrogate = generator.getValueFromSurrogate(surrogate);
+            if (valueFromSurrogate == null) {
+              vector.putNull(vectorOffset++);
+            } else {
+              if (dataType == DataType.INT) {
+                vector.putInt(vectorOffset++, (int) valueFromSurrogate);
+              } else {
+                vector.putLong(vectorOffset++, (long) valueFromSurrogate);
+              }
+            }
+          }
+        }
+        break;
+      case STRING:
+        for (int rowId = offsetRowId; rowId < maxRowId; rowId++) {
+          if (nullBitset.get(rowMapping[rowId])) {
+            // means the data for this row is null
+            vector.putNull(vectorOffset++);
+          } else {
+            byte[] data = columnPage.getBytes(rowMapping[rowId]);
+            if (ByteUtil.UnsafeComparer.INSTANCE
+                .equals(CarbonCommonConstants.MEMBER_DEFAULT_VAL_ARRAY, data)) {
+              vector.putNull(vectorOffset++);
+            } else {
+              vector.putBytes(vectorOffset++, 0, data.length, data);
+            }
+          }
+        }
+        break;
+      default:
+        throw new RuntimeException("unsupported data type: " + columnPage.getDataType());
+    }
+    return column + 1;
   }
 
   @Override
@@ -71,7 +190,7 @@ public class ColumnPageWrapper implements DimensionColumnDataChunk {
 
   @Override
   public int getColumnValueSize() {
-    throw new UnsupportedOperationException("internal error");
+    return columnValueSize;
   }
 
   @Override
@@ -80,13 +199,22 @@ public class ColumnPageWrapper implements DimensionColumnDataChunk {
   }
 
   @Override
-  public int compareTo(int index, byte[] compareValue) {
-    throw new UnsupportedOperationException("internal error");
+  public int compareTo(int rowId, byte[] compareValue) {
+    if (columnPage.getDataType() == DataType.TIMESTAMP ||
+        columnPage.getDataType() == DataType.DATE) {
+      int surrogate = columnPage.getInt(rowId);
+      int input = ByteBuffer.wrap(compareValue).getInt();
+      return surrogate - input;
+    } else {
+      byte[] data = columnPage.getBytes(rowId);
+      return ByteUtil.UnsafeComparer.INSTANCE
+          .compareTo(data, 0, data.length, compareValue, 0, compareValue.length);
+    }
   }
 
   @Override
   public void freeMemory() {
-
+    columnPage.freeMemory();
   }
 
 }

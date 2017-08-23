@@ -240,7 +240,12 @@ public class SafeFixLengthColumnPage extends ColumnPage {
   }
 
   @Override
-  public byte[] getFlattenedBytePage() {
+  public byte[] getLVFlattenedBytePage() {
+    throw new UnsupportedOperationException("invalid data type: " + dataType);
+  }
+
+  @Override
+  public byte[] getDirectFlattenedBytePage() {
     throw new UnsupportedOperationException("invalid data type: " + dataType);
   }
 
@@ -329,6 +334,8 @@ public class SafeFixLengthColumnPage extends ColumnPage {
           codec.encode(i, shortData[i]);
         }
         break;
+      case TIMESTAMP:
+      case DATE:
       case INT:
         for (int i = 0; i < pageSize; i++) {
           codec.encode(i, intData[i]);

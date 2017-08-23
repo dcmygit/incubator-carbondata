@@ -25,22 +25,20 @@ import org.apache.carbondata.core.datastore.page.encoding.adaptive.AdaptiveDelta
 import org.apache.carbondata.core.datastore.page.encoding.adaptive.AdaptiveFloatingCodec;
 import org.apache.carbondata.core.datastore.page.encoding.adaptive.AdaptiveIntegralCodec;
 import org.apache.carbondata.core.datastore.page.encoding.compress.DirectCompressCodec;
-import org.apache.carbondata.core.datastore.page.encoding.dimension.legacy.ComplexDimensionIndexCodec;
 import org.apache.carbondata.core.datastore.page.encoding.dimension.legacy.DictDimensionIndexCodec;
 import org.apache.carbondata.core.datastore.page.encoding.dimension.legacy.DirectDictDimensionIndexCodec;
 import org.apache.carbondata.core.datastore.page.encoding.dimension.legacy.HighCardDictDimensionIndexCodec;
+import org.apache.carbondata.core.datastore.page.encoding.directstring.DirectStringCodec;
 import org.apache.carbondata.core.datastore.page.statistics.SimpleStatsResult;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 
 /**
  * Default strategy will select encoding base on column page data type and statistics
  */
-public class DefaultEncodingStrategy extends EncodingStrategy {
+public class DefaultEncodingFactory extends EncodingFactory {
 
   private static final int THREE_BYTES_MAX = (int) Math.pow(2, 23) - 1;
   private static final int THREE_BYTES_MIN = - THREE_BYTES_MAX - 1;
-
-  private static final boolean newWay = false;
 
   @Override
   public ColumnPageEncoder createEncoder(TableSpec.ColumnSpec columnSpec, ColumnPage inputPage) {
@@ -48,28 +46,35 @@ public class DefaultEncodingStrategy extends EncodingStrategy {
     if (columnSpec instanceof TableSpec.MeasureSpec) {
       return createEncoderForMeasure(inputPage);
     } else {
-      if (newWay) {
-        return createEncoderForDimension((TableSpec.DimensionSpec) columnSpec, inputPage);
-      } else {
-        return createEncoderForDimensionLegacy((TableSpec.DimensionSpec) columnSpec);
+      ColumnPageEncoder encoder = createEncoderForDimension((TableSpec.DimensionSpec) columnSpec,
+          inputPage);
+      if (encoder == null) {
+        // if it is null, use the legacy encoding
+        encoder = createEncoderForDimensionLegacy((TableSpec.DimensionSpec) columnSpec);
       }
+      return encoder;
     }
   }
 
+  // Add all new encoding in this method, currently only DIREST_STRING encoding
+  // for string column (high cardinality) is supported.
   private ColumnPageEncoder createEncoderForDimension(TableSpec.DimensionSpec columnSpec,
       ColumnPage inputPage) {
-    Compressor compressor = CompressorFactory.getInstance().getCompressor();
     switch (columnSpec.getDimensionType()) {
-      case GLOBAL_DICTIONARY:
       case DIRECT_DICTIONARY:
+        return selectCodecByAlgorithm(inputPage.getStatistics()).createEncoder(null);
       case PLAIN_VALUE:
-        return new DirectCompressCodec(inputPage.getDataType()).createEncoder(null);
-      case COMPLEX:
-        return new ComplexDimensionIndexCodec(false, false, compressor).createEncoder(null);
-      default:
-        throw new RuntimeException("unsupported dimension type: " +
-            columnSpec.getDimensionType());
+        switch (inputPage.getDataType()) {
+          case BYTE:
+          case SHORT:
+          case INT:
+          case LONG:
+            return selectCodecByAlgorithm(inputPage.getStatistics()).createEncoder(null);
+          case STRING:
+            return new DirectStringCodec().createEncoder(null);
+        }
     }
+    return null;
   }
 
   private ColumnPageEncoder createEncoderForDimensionLegacy(TableSpec.DimensionSpec columnSpec) {
@@ -136,6 +141,8 @@ public class DefaultEncodingStrategy extends EncodingStrategy {
         return fitLongMinMax((byte) max, (byte) min);
       case SHORT:
         return fitLongMinMax((short) max, (short) min);
+      case TIMESTAMP:
+      case DATE:
       case INT:
         return fitLongMinMax((int) max, (int) min);
       case LONG:
@@ -158,6 +165,8 @@ public class DefaultEncodingStrategy extends EncodingStrategy {
       case SHORT:
         value = (long)(short) max - (long)(short) min;
         break;
+      case TIMESTAMP:
+      case DATE:
       case INT:
         value = (long)(int) max - (long)(int) min;
         break;

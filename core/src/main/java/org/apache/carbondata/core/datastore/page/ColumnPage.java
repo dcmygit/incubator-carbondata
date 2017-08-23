@@ -24,14 +24,19 @@ import java.util.BitSet;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.compression.Compressor;
 import org.apache.carbondata.core.datastore.page.statistics.ColumnPageStatsCollector;
+import org.apache.carbondata.core.datastore.page.statistics.KeyPageStatsCollector;
+import org.apache.carbondata.core.datastore.page.statistics.PrimitivePageStatsCollector;
 import org.apache.carbondata.core.datastore.page.statistics.SimpleStatsResult;
+import org.apache.carbondata.core.datastore.page.statistics.StringStatsCollector;
 import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DecimalConverterFactory;
+import org.apache.carbondata.core.util.ByteUtil;
 import org.apache.carbondata.core.util.CarbonProperties;
 
 import static org.apache.carbondata.core.metadata.datatype.DataType.BYTE;
 import static org.apache.carbondata.core.metadata.datatype.DataType.BYTE_ARRAY;
+import static org.apache.carbondata.core.metadata.datatype.DataType.DATE;
 import static org.apache.carbondata.core.metadata.datatype.DataType.DECIMAL;
 import static org.apache.carbondata.core.metadata.datatype.DataType.DOUBLE;
 import static org.apache.carbondata.core.metadata.datatype.DataType.FLOAT;
@@ -39,6 +44,7 @@ import static org.apache.carbondata.core.metadata.datatype.DataType.INT;
 import static org.apache.carbondata.core.metadata.datatype.DataType.LONG;
 import static org.apache.carbondata.core.metadata.datatype.DataType.SHORT;
 import static org.apache.carbondata.core.metadata.datatype.DataType.SHORT_INT;
+import static org.apache.carbondata.core.metadata.datatype.DataType.TIMESTAMP;
 
 public abstract class ColumnPage {
 
@@ -113,10 +119,6 @@ public abstract class ColumnPage {
     return pageSize;
   }
 
-  public void setStatsCollector(ColumnPageStatsCollector statsCollector) {
-    this.statsCollector = statsCollector;
-  }
-
   private static ColumnPage createVarLengthPage(DataType dataType, int pageSize, int scale,
       int precision) {
     if (unsafe) {
@@ -175,10 +177,12 @@ public abstract class ColumnPage {
         case LONG:
         case FLOAT:
         case DOUBLE:
+        case TIMESTAMP:
+        case DATE:
           instance = new UnsafeFixLengthColumnPage(dataType, pageSize, -1, -1);
           break;
-        case DECIMAL:
         case STRING:
+        case DECIMAL:
         case BYTE_ARRAY:
           instance = new UnsafeVarLengthColumnPage(dataType, pageSize, scale, precision);
           break;
@@ -195,6 +199,12 @@ public abstract class ColumnPage {
           break;
         case SHORT_INT:
           instance = newShortIntPage(new byte[pageSize * 3]);
+          break;
+        case TIMESTAMP:
+          instance = newTimestampPage(new int[pageSize]);
+          break;
+        case DATE:
+          instance = newDatePage(new int[pageSize]);
           break;
         case INT:
           instance = newIntPage(new int[pageSize]);
@@ -219,7 +229,36 @@ public abstract class ColumnPage {
           throw new RuntimeException("Unsupported data dataType: " + dataType);
       }
     }
+    instance.setStatsCollector(dataType, scale, precision);
     return instance;
+  }
+
+  private void setStatsCollector(DataType dataType, int scale, int precision) {
+    ColumnPageStatsCollector collector;
+    switch (dataType) {
+      case BYTE:
+      case SHORT:
+      case SHORT_INT:
+      case INT:
+      case LONG:
+      case DOUBLE:
+      case TIMESTAMP:
+      case DATE:
+        collector = PrimitivePageStatsCollector.newInstance(dataType, -1, -1);
+        break;
+      case DECIMAL:
+        collector = PrimitivePageStatsCollector.newInstance(dataType, scale, precision);
+        break;
+      case STRING:
+        collector = StringStatsCollector.newInstance();
+        break;
+      case BYTE_ARRAY:
+        collector = KeyPageStatsCollector.newInstance(dataType);
+        break;
+      default:
+        throw new RuntimeException("internal error");
+    }
+    this.statsCollector = collector;
   }
 
   public static ColumnPage wrapByteArrayPage(byte[][] byteArray) {
@@ -255,6 +294,18 @@ public abstract class ColumnPage {
   private static ColumnPage newLongPage(long[] longData) {
     ColumnPage columnPage = createPage(LONG, longData.length,  -1, -1);
     columnPage.setLongPage(longData);
+    return columnPage;
+  }
+
+  private static ColumnPage newTimestampPage(int[] intData) {
+    ColumnPage columnPage = createPage(TIMESTAMP, intData.length,  -1, -1);
+    columnPage.setIntPage(intData);
+    return columnPage;
+  }
+
+  private static ColumnPage newDatePage(int[] intData) {
+    ColumnPage columnPage = createPage(DATE, intData.length,  -1, -1);
+    columnPage.setIntPage(intData);
     return columnPage;
   }
 
@@ -331,6 +382,8 @@ public abstract class ColumnPage {
    */
   public abstract void freeMemory();
 
+  private static final byte[] NULL_STRING = new byte[0];
+
   /**
    * Set value at rowId
    */
@@ -350,6 +403,8 @@ public abstract class ColumnPage {
         putShort(rowId, (short) value);
         statsCollector.update((short) value);
         break;
+      case TIMESTAMP:
+      case DATE:
       case INT:
         putInt(rowId, (int) value);
         statsCollector.update((int) value);
@@ -367,6 +422,16 @@ public abstract class ColumnPage {
         statsCollector.update((BigDecimal) value);
         break;
       case STRING:
+        // TODO: check if null representation, if it is null, use the null bit set
+        if (ByteUtil.UnsafeComparer.INSTANCE.equals(CarbonCommonConstants.MEMBER_DEFAULT_VAL_ARRAY, (byte[]) value)) {
+          putBytes(rowId, NULL_STRING);
+          statsCollector.updateNull(rowId);
+          nullBitSet.set(rowId);
+        } else {
+          putBytes(rowId, (byte[]) value);
+          statsCollector.update((byte[]) value);
+        }
+        break;
       case BYTE_ARRAY:
         putBytes(rowId, (byte[]) value);
         statsCollector.update((byte[]) value);
@@ -536,9 +601,14 @@ public abstract class ColumnPage {
   public abstract byte[][] getByteArrayPage();
 
   /**
-   * For variable length page, get the flattened data
+   * For variable length page, get the Length-Value flattened data
    */
-  public abstract byte[] getFlattenedBytePage();
+  public abstract byte[] getLVFlattenedBytePage();
+
+  /**
+   * For variable length page, get the directly flattened data
+   */
+  public abstract byte[] getDirectFlattenedBytePage();
 
   /**
    * For decimals
@@ -561,6 +631,8 @@ public abstract class ColumnPage {
         return compressor.compressShort(getShortPage());
       case SHORT_INT:
         return compressor.compressByte(getShortIntPage());
+      case TIMESTAMP:
+      case DATE:
       case INT:
         return compressor.compressInt(getIntPage());
       case LONG:
@@ -572,7 +644,7 @@ public abstract class ColumnPage {
       case DECIMAL:
         return compressor.compressByte(getDecimalPage());
       case BYTE_ARRAY:
-        return compressor.compressByte(getFlattenedBytePage());
+        return compressor.compressByte(getLVFlattenedBytePage());
       default:
         throw new UnsupportedOperationException("unsupport compress column page: " + dataType);
     }
@@ -598,6 +670,12 @@ public abstract class ColumnPage {
       case INT:
         int[] intData = compressor.unCompressInt(compressedData, offset, length);
         return newIntPage(intData);
+      case TIMESTAMP:
+        intData = compressor.unCompressInt(compressedData, offset, length);
+        return newTimestampPage(intData);
+      case DATE:
+        intData = compressor.unCompressInt(compressedData, offset, length);
+        return newDatePage(intData);
       case LONG:
         long[] longData = compressor.unCompressLong(compressedData, offset, length);
         return newLongPage(longData);
@@ -625,6 +703,15 @@ public abstract class ColumnPage {
     return newDecimalPage(lvEncodedBytes, scale, precision);
   }
 
+  /**
+   * Decompress and return a String page.
+   */
+  public static ColumnPage decompressStringPage(Compressor compressor,
+      byte[] compressedData, int offset, int length, byte[] lengths) throws MemoryException {
+    byte[] bytes = compressor.unCompressByte(compressedData, offset, length);
+    return SafeVarLengthColumnPage.newStringPage(bytes, lengths);
+  }
+
   public BitSet getNullBits() {
     return nullBitSet;
   }
@@ -632,4 +719,6 @@ public abstract class ColumnPage {
   public void setNullBits(BitSet nullBitSet) {
     this.nullBitSet = nullBitSet;
   }
+
+
 }

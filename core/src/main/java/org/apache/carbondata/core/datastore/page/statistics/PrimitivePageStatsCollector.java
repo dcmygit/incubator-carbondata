@@ -43,10 +43,7 @@ public class PrimitivePageStatsCollector implements ColumnPageStatsCollector, Si
   // this is for encode flow
   public static PrimitivePageStatsCollector newInstance(DataType dataType,
       int scale, int precision) {
-    switch (dataType) {
-      default:
-        return new PrimitivePageStatsCollector(dataType, scale, precision);
-    }
+    return new PrimitivePageStatsCollector(dataType, scale, precision);
   }
 
   // this is for decode flow, create stats from encoder meta in carbondata file
@@ -63,6 +60,9 @@ public class PrimitivePageStatsCollector implements ColumnPageStatsCollector, Si
         instance.minShort = (short) meta.getMinValue();
         instance.maxShort = (short) meta.getMaxValue();
         break;
+      case TIMESTAMP:
+      case DATE:
+      case SHORT_INT:
       case INT:
         instance.minInt = (int) meta.getMinValue();
         instance.maxInt = (int) meta.getMaxValue();
@@ -103,6 +103,9 @@ public class PrimitivePageStatsCollector implements ColumnPageStatsCollector, Si
         instance.minShort = (short) meta.getMinValue();
         instance.maxShort = (short) meta.getMaxValue();
         break;
+      case TIMESTAMP:
+      case DATE:
+      case SHORT_INT:
       case INT:
         instance.minInt = (int) meta.getMinValue();
         instance.maxInt = (int) meta.getMaxValue();
@@ -141,6 +144,9 @@ public class PrimitivePageStatsCollector implements ColumnPageStatsCollector, Si
         minShort = Short.MAX_VALUE;
         maxShort = Short.MIN_VALUE;
         break;
+      case TIMESTAMP:
+      case DATE:
+      case SHORT_INT:
       case INT:
         minInt = Integer.MAX_VALUE;
         maxInt = Integer.MIN_VALUE;
@@ -176,6 +182,9 @@ public class PrimitivePageStatsCollector implements ColumnPageStatsCollector, Si
       case SHORT:
         update((short) value);
         break;
+      case TIMESTAMP:
+      case DATE:
+      case SHORT_INT:
       case INT:
         update((int) value);
         break;
@@ -303,6 +312,9 @@ public class PrimitivePageStatsCollector implements ColumnPageStatsCollector, Si
         return String.format("min: %s, max: %s, decimal: %s ", minByte, maxByte, decimal);
       case SHORT:
         return String.format("min: %s, max: %s, decimal: %s ", minShort, maxShort, decimal);
+      case TIMESTAMP:
+      case DATE:
+      case SHORT_INT:
       case INT:
         return String.format("min: %s, max: %s, decimal: %s ", minInt, maxInt, decimal);
       case LONG:
@@ -320,6 +332,9 @@ public class PrimitivePageStatsCollector implements ColumnPageStatsCollector, Si
         return minByte;
       case SHORT:
         return minShort;
+      case TIMESTAMP:
+      case DATE:
+      case SHORT_INT:
       case INT:
         return minInt;
       case LONG:
@@ -339,6 +354,9 @@ public class PrimitivePageStatsCollector implements ColumnPageStatsCollector, Si
         return maxByte;
       case SHORT:
         return maxShort;
+      case TIMESTAMP:
+      case DATE:
+      case SHORT_INT:
       case INT:
         return maxInt;
       case LONG:

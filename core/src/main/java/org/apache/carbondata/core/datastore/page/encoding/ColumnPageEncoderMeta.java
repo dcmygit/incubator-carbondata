@@ -127,6 +127,8 @@ public class ColumnPageEncoderMeta extends ValueEncoderMeta implements Writable 
         out.writeShort((short) getMinValue());
         out.writeLong(0L); // unique value is obsoleted, maintain for compatibility
         break;
+      case TIMESTAMP:
+      case DATE:
       case INT:
         out.writeInt((int) getMaxValue());
         out.writeInt((int) getMinValue());
@@ -143,8 +145,8 @@ public class ColumnPageEncoderMeta extends ValueEncoderMeta implements Writable 
         out.writeDouble(0d); // unique value is obsoleted, maintain for compatibility
         break;
       case DECIMAL:
-        byte[] maxAsBytes = getMaxAsBytes();
-        byte[] minAsBytes = getMinAsBytes();
+        byte[] maxAsBytes = DataTypeUtil.bigDecimalToByte((BigDecimal)getMaxValue());
+        byte[] minAsBytes = DataTypeUtil.bigDecimalToByte((BigDecimal)getMinValue());
         byte[] unique = DataTypeUtil.bigDecimalToByte(BigDecimal.ZERO);
         out.writeShort((short) maxAsBytes.length);
         out.write(maxAsBytes);
@@ -177,6 +179,8 @@ public class ColumnPageEncoderMeta extends ValueEncoderMeta implements Writable 
         this.setMinValue(in.readShort());
         in.readLong();  // for non exist value which is obsoleted, it is backward compatibility;
         break;
+      case TIMESTAMP:
+      case DATE:
       case INT:
         this.setMaxValue(in.readInt());
         this.setMinValue(in.readInt());
@@ -211,56 +215,6 @@ public class ColumnPageEncoderMeta extends ValueEncoderMeta implements Writable 
         break;
       default:
         throw new IllegalArgumentException("invalid data type: " + dataType);
-    }
-  }
-
-  public byte[] getMaxAsBytes() {
-    return getValueAsBytes(getMaxValue());
-  }
-
-  public byte[] getMinAsBytes() {
-    return getValueAsBytes(getMinValue());
-  }
-
-  /**
-   * convert value to byte array
-   */
-  private byte[] getValueAsBytes(Object value) {
-    ByteBuffer b;
-    switch (dataType) {
-      case BYTE:
-        b = ByteBuffer.allocate(8);
-        b.putLong((byte) value);
-        b.flip();
-        return b.array();
-      case SHORT:
-        b = ByteBuffer.allocate(8);
-        b.putLong((short) value);
-        b.flip();
-        return b.array();
-      case INT:
-        b = ByteBuffer.allocate(8);
-        b.putLong((int) value);
-        b.flip();
-        return b.array();
-      case LONG:
-        b = ByteBuffer.allocate(8);
-        b.putLong((long) value);
-        b.flip();
-        return b.array();
-      case DOUBLE:
-        b = ByteBuffer.allocate(8);
-        b.putDouble((double) value);
-        b.flip();
-        return b.array();
-      case DECIMAL:
-        return DataTypeUtil.bigDecimalToByte((BigDecimal)value);
-      case STRING:
-      case TIMESTAMP:
-      case DATE:
-        return (byte[]) value;
-      default:
-        throw new IllegalArgumentException("Invalid data type: " + dataType);
     }
   }
 
