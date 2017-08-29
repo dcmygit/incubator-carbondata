@@ -69,10 +69,10 @@ public class ArrayQueryType extends ComplexQueryType implements GenericQueryType
     int dataLength = byteArray.getInt();
     dataOutputStream.writeInt(dataLength);
     if (dataLength > 0) {
-      int columnIndex = byteArray.getInt();
+      int dataOffset = byteArray.getInt();
       for (int i = 0; i < dataLength; i++) {
         children
-            .parseBlocksAndReturnComplexColumnByteArray(rawColumnChunks, columnIndex++, pageNumber,
+            .parseBlocksAndReturnComplexColumnByteArray(rawColumnChunks, dataOffset++, pageNumber,
                 dataOutputStream);
       }
     }

@@ -90,6 +90,11 @@ public class PrimitiveDataType implements GenericDataType<Object> {
 
   private CarbonDimension carbonDimension;
 
+  private PrimitiveDataType(int outputArrayIndex, int dataCounter) {
+    this.outputArrayIndex = outputArrayIndex;
+    this.dataCounter = dataCounter;
+  }
+
   /**
    * constructor
    *
@@ -315,5 +320,10 @@ public class PrimitiveDataType implements GenericDataType<Object> {
   public void fillCardinalityAfterDataLoad(List<Integer> dimCardWithComplex,
       int[] maxSurrogateKeyArray) {
     dimCardWithComplex.add(maxSurrogateKeyArray[index]);
+  }
+
+  @Override
+  public GenericDataType clone() {
+    return new PrimitiveDataType(this.outputArrayIndex, 0);
   }
 }

@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.carbondata.core.datastore.DimensionType;
 import org.apache.carbondata.core.datastore.TableSpec;
@@ -78,6 +80,9 @@ public class TablePage {
   // true if it is last page of all input rows
   private boolean isLastPage;
 
+  // used for complex column to deserilize the byte array in input CarbonRow
+  private Map<Integer, GenericDataType> complexIndexMap = null;
+
   TablePage(CarbonFactDataHandlerModel model, int pageSize) throws MemoryException {
     this.model = model;
     this.pageSize = pageSize;
@@ -119,6 +124,12 @@ public class TablePage {
     boolean hasNoDictionary = noDictDimensionPages.length > 0;
     this.key = new TablePageKey(pageSize, model.getMDKeyGenerator(), model.getSegmentProperties(),
         hasNoDictionary);
+
+    // for complex type, we need to clone the index map
+    this.complexIndexMap = new HashMap<>();
+    for (Map.Entry<Integer, GenericDataType> entry: model.getComplexIndexMap().entrySet()) {
+      this.complexIndexMap.put(entry.getKey(), entry.getValue().clone());
+    }
   }
 
   /**
@@ -187,7 +198,7 @@ public class TablePage {
   // TODO: this function should be refactoried, ColumnPage should support complex type encoding
   // directly instead of doing it here
   private void addComplexColumn(int index, int rowId, byte[] complexColumns) {
-    GenericDataType complexDataType = model.getComplexIndexMap().get(
+    GenericDataType complexDataType = complexIndexMap.get(
         index + model.getPrimitiveDimLens().length);
 
     // initialize the page if first row
@@ -211,8 +222,11 @@ public class TablePage {
       DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutput);
       complexDataType.parseAndBitPack(byteArrayInput, dataOutputStream,
           model.getComplexDimensionKeyGenerator());
-      complexDataType.getColumnarDataForComplexType(encodedComplexColumnar,
+
+      complexDataType.getColumnarDataForComplexType(
+          encodedComplexColumnar,
           ByteBuffer.wrap(byteArrayOutput.toByteArray()));
+
       byteArrayOutput.close();
     } catch (IOException | KeyGenException e) {
       throw new CarbonDataWriterException("Problem while bit packing and writing complex datatype",
