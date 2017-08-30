@@ -99,7 +99,7 @@ public class StringStatsCollector implements ColumnPageStatsCollector {
         return max;
       }
 
-      @Override public int getDecimalPoint() {
+      @Override public int getDecimalCount() {
         return 0;
       }
 

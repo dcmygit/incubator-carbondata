@@ -62,14 +62,17 @@ public class DefaultEncodingFactory extends EncodingFactory {
       ColumnPage inputPage) {
     switch (columnSpec.getDimensionType()) {
       case DIRECT_DICTIONARY:
-        return selectCodecByAlgorithm(inputPage.getStatistics()).createEncoder(null);
+        return selectCodecByAlgorithmForIntegral(inputPage.getStatistics()).createEncoder(null);
       case PLAIN_VALUE:
         switch (inputPage.getDataType()) {
           case BYTE:
           case SHORT:
           case INT:
           case LONG:
-            return selectCodecByAlgorithm(inputPage.getStatistics()).createEncoder(null);
+            return selectCodecByAlgorithmForIntegral(inputPage.getStatistics()).createEncoder(null);
+          case FLOAT:
+          case DOUBLE:
+            return selectCodecByAlgorithmForFloating(inputPage.getStatistics()).createEncoder(null);
           case STRING:
             return new DirectStringCodec().createEncoder(null);
         }

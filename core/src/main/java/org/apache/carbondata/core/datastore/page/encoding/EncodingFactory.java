@@ -122,7 +122,7 @@ public abstract class EncodingFactory {
         return DefaultEncodingFactory.selectCodecByAlgorithmForIntegral(stats).createDecoder(null);
       case FLOAT:
       case DOUBLE:
-        return DefaultEncodingStrategy.selectCodecByAlgorithmForFloating(stats).createDecoder(null);
+        return DefaultEncodingFactory.selectCodecByAlgorithmForFloating(stats).createDecoder(null);
       case DECIMAL:
       case BYTE_ARRAY:
         // no dictionary dimension

@@ -105,7 +105,7 @@ public class AdaptiveFloatingCodec extends AdaptiveCodec {
       public ColumnPage decode(byte[] input, int offset, int length)
           throws MemoryException, IOException {
         ColumnPage page = ColumnPage.decompress(compressor, targetDataType, input, offset, length);
-        return LazyColumnPage.newPage(page, converter);
+        return LazyColumnPage.newPage(srcDataType, page, converter);
       }
     };
   }
