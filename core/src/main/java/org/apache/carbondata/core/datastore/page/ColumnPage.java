@@ -423,7 +423,8 @@ public abstract class ColumnPage {
         break;
       case STRING:
         // TODO: check if null representation, if it is null, use the null bit set
-        if (ByteUtil.UnsafeComparer.INSTANCE.equals(CarbonCommonConstants.MEMBER_DEFAULT_VAL_ARRAY, (byte[]) value)) {
+        if (ByteUtil.UnsafeComparer.INSTANCE.equals(CarbonCommonConstants.MEMBER_DEFAULT_VAL_ARRAY,
+            (byte[]) value)) {
           putBytes(rowId, NULL_STRING);
           statsCollector.updateNull(rowId);
           nullBitSet.set(rowId);
