@@ -384,7 +384,6 @@ public final class DataTypeUtil {
     }
   }
 
-
   /**
    * Below method will be used to convert the data passed to its actual data
    * type

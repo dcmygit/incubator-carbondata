@@ -40,6 +40,8 @@ import org.apache.carbondata.core.datastore.row.WriteStepRowUtil;
 import org.apache.carbondata.core.keygenerator.KeyGenException;
 import org.apache.carbondata.core.memory.MemoryException;
 import org.apache.carbondata.core.metadata.datatype.DataType;
+import org.apache.carbondata.core.util.ByteUtil;
+import org.apache.carbondata.core.util.DataTypeUtil;
 import org.apache.carbondata.processing.datatypes.GenericDataType;
 
 import org.apache.spark.sql.types.Decimal;
@@ -94,7 +96,6 @@ public class TablePage {
           dimensionPages[i] = page;
           break;
         case PLAIN_VALUE:
-          assert (spec.getDataType() == DataType.STRING);
           page = ColumnPage.newPage(spec.getDataType(), pageSize);
           dimensionPages[i] = page;
           hasNoDictionary = true;
@@ -167,7 +168,18 @@ public class TablePage {
           dimensionPages[i].putData(rowId, surrogate[dictValueIndex++]);
           break;
         case PLAIN_VALUE:
-          dimensionPages[i].putData(rowId, plainValues[plainValueIndex++]);
+          byte[] bytes = plainValues[plainValueIndex];
+          Object value = bytes;
+          if (spec.getDataType() != DataType.STRING) {
+            // For plain value and it is not string, we need to convert byte array back
+            // to normal value. If it is string, it is already in UTF-8 byte array
+            // TODO: modify sort step to accept all numerical data type in sort columns. After
+            // that, this conversion can be removed
+            value = DataTypeUtil.getDataBasedOnDataTypeForNoDictionaryColumn(
+                bytes, spec.getDataType());
+          }
+          dimensionPages[i].putData(rowId, value);
+          plainValueIndex++;
           break;
         default:
       }
