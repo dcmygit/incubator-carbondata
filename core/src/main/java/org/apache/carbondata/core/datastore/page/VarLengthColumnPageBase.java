@@ -25,9 +25,7 @@ import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DecimalConverterFactory;
 import org.apache.carbondata.core.util.ByteUtil;
 
-import static org.apache.carbondata.core.metadata.datatype.DataType.BYTE;
 import static org.apache.carbondata.core.metadata.datatype.DataType.DECIMAL;
-import static org.apache.carbondata.core.metadata.datatype.DataType.SHORT;
 
 public abstract class VarLengthColumnPageBase extends ColumnPage {
 
