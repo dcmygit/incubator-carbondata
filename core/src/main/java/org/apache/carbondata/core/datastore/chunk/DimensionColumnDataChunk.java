@@ -70,7 +70,7 @@ public interface DimensionColumnDataChunk {
    *
    * @return chunk
    */
-  byte[] getChunkData(int columnIndex);
+  byte[] getChunkData(int rowId);
 
   /**
    * @return inverted index

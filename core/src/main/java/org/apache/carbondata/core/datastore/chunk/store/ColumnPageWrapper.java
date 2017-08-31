@@ -174,8 +174,14 @@ public class ColumnPageWrapper implements DimensionColumnDataChunk {
   }
 
   @Override
-  public byte[] getChunkData(int columnIndex) {
-    return columnPage.getBytes(columnIndex);
+  public byte[] getChunkData(int rowId) {
+    DataType dataType = columnPage.getDataType();
+    if (dataType == DataType.TIMESTAMP || dataType == DataType.DATE) {
+      int data = columnPage.getInt(rowId);
+      return ByteUtil.toBytes(data);
+    } else {
+      return columnPage.getBytes(rowId);
+    }
   }
 
   @Override

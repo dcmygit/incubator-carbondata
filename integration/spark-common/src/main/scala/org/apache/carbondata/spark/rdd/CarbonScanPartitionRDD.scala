@@ -212,7 +212,7 @@ class CarbonScanPartitionRDD(
         if (partitionDataType == DataType.STRING) {
           if (partitionType == PartitionType.RANGE) {
             partitionValue = ByteUtil.
-              toBytes(dict.getDictionaryValueForKey(keyArray(partColIdx).toInt))
+              toBytesForPlainValue(dict.getDictionaryValueForKey(keyArray(partColIdx).toInt))
           } else {
             partitionValue = dict.getDictionaryValueForKey(keyArray(partColIdx).toInt)
           }

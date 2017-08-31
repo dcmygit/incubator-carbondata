@@ -177,11 +177,11 @@ public class UnsafeVariableLengthDimesionDataChunkStore
       } else if (dt instanceof BooleanType) {
         vector.putBoolean(vectorRowId, ByteUtil.toBoolean(value[0]));
       } else if (dt instanceof ShortType) {
-        vector.putShort(vectorRowId, ByteUtil.toShort(value, 0, value.length));
+        vector.putShort(vectorRowId, ByteUtil.toShortForPlainValue(value, 0, value.length));
       } else if (dt instanceof IntegerType) {
-        vector.putInt(vectorRowId, ByteUtil.toInt(value, 0, value.length));
+        vector.putInt(vectorRowId, ByteUtil.toIntForPlainValue(value, 0, value.length));
       } else if (dt instanceof LongType) {
-        vector.putLong(vectorRowId, ByteUtil.toLong(value, 0, value.length));
+        vector.putLong(vectorRowId, ByteUtil.toLongForPlainValue(value, 0, value.length));
       }
     }
   }

@@ -150,11 +150,12 @@ public class SafeVariableLengthDimensionDataChunkStore extends SafeAbsractDimens
       } else if (dt instanceof BooleanType) {
         vector.putBoolean(vectorRowId, ByteUtil.toBoolean(data[currentDataOffset]));
       } else if (dt instanceof ShortType) {
-        vector.putShort(vectorRowId, ByteUtil.toShort(data, currentDataOffset, length));
+        vector.putShort(vectorRowId,
+            ByteUtil.toShortForPlainValue(data, currentDataOffset, length));
       } else if (dt instanceof IntegerType) {
-        vector.putInt(vectorRowId, ByteUtil.toInt(data, currentDataOffset, length));
+        vector.putInt(vectorRowId, ByteUtil.toIntForPlainValue(data, currentDataOffset, length));
       } else if (dt instanceof LongType) {
-        vector.putLong(vectorRowId, ByteUtil.toLong(data, currentDataOffset, length));
+        vector.putLong(vectorRowId, ByteUtil.toLongForPlainValue(data, currentDataOffset, length));
       }
     }
   }

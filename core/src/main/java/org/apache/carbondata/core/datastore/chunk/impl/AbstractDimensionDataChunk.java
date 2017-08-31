@@ -39,11 +39,11 @@ public abstract class AbstractDimensionDataChunk implements DimensionColumnDataC
   /**
    * Below method to get the data based in row id
    *
-   * @param index row id of the data
+   * @param rowId row id of the data
    * @return chunk
    */
-  @Override public byte[] getChunkData(int index) {
-    return dataChunkStore.getRow(index);
+  @Override public byte[] getChunkData(int rowId) {
+    return dataChunkStore.getRow(rowId);
   }
 
   /**
