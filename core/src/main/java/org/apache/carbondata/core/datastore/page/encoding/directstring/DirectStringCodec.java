@@ -47,7 +47,7 @@ public class DirectStringCodec implements ColumnPageCodec {
   public ColumnPageEncoder createEncoder(Map<String, String> parameter) {
     return new ColumnPageEncoder() {
       Compressor compressor = CompressorFactory.getInstance().getCompressor();
-      byte[] lengthOfString;
+      short[] lengthOfString;
 
       @Override
       protected byte[] encodeData(ColumnPage input) throws MemoryException, IOException {

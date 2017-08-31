@@ -92,7 +92,7 @@ public class SafeVarLengthColumnPage extends VarLengthColumnPageBase {
   /**
    * Return a new column page that construct from input byte array and length of each row
    */
-  public static ColumnPage newStringPage(byte[] bytes, byte[] lengths) throws MemoryException {
+  static ColumnPage newStringPage(byte[] bytes, short[] lengths) throws MemoryException {
     int pageSize = lengths.length;
     SafeVarLengthColumnPage page = new SafeVarLengthColumnPage(STRING, pageSize, -1, -1);
     page.rowOffset[0] = 0;

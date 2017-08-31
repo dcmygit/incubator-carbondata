@@ -708,7 +708,7 @@ public abstract class ColumnPage {
    * Decompress and return a String page.
    */
   public static ColumnPage decompressStringPage(Compressor compressor,
-      byte[] compressedData, int offset, int length, byte[] lengths) throws MemoryException {
+      byte[] compressedData, int offset, int length, short[] lengths) throws MemoryException {
     byte[] bytes = compressor.unCompressByte(compressedData, offset, length);
     return SafeVarLengthColumnPage.newStringPage(bytes, lengths);
   }

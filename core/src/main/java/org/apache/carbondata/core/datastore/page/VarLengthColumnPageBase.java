@@ -25,7 +25,9 @@ import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DecimalConverterFactory;
 import org.apache.carbondata.core.util.ByteUtil;
 
+import static org.apache.carbondata.core.metadata.datatype.DataType.BYTE;
 import static org.apache.carbondata.core.metadata.datatype.DataType.DECIMAL;
+import static org.apache.carbondata.core.metadata.datatype.DataType.SHORT;
 
 public abstract class VarLengthColumnPageBase extends ColumnPage {
 
@@ -186,14 +188,14 @@ public abstract class VarLengthColumnPageBase extends ColumnPage {
   /**
    * Return the length of each byte array in this page
    */
-  public byte[] getLengths() {
-    byte[] lengths = new byte[pageSize];
+  public short[] getLengths() {
+    short[] lengths = new short[pageSize];
     for (int rowId = 0; rowId < pageSize; rowId++) {
       int length = rowOffset[rowId + 1] - rowOffset[rowId];
-      if (length > Byte.MAX_VALUE) {
+      if (length > Short.MAX_VALUE) {
         throw new RuntimeException("not support value length exceed " + Short.MAX_VALUE + " bytes");
       }
-      lengths[rowId] = (byte) (rowOffset[rowId + 1] - rowOffset[rowId]);
+      lengths[rowId] = (short) length;
     }
     return lengths;
   }

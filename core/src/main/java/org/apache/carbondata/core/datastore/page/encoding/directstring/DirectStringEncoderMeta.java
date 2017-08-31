@@ -28,18 +28,18 @@ import org.apache.carbondata.core.metadata.schema.table.Writable;
 
 public class DirectStringEncoderMeta extends ColumnPageEncoderMeta implements Writable {
 
-  private byte[] lengthOfString;
+  private short[] lengthOfString;
   private String compressorName;
 
   public DirectStringEncoderMeta() {
   }
 
-  public DirectStringEncoderMeta(byte[] lengthOfString, String compressorName) {
+  public DirectStringEncoderMeta(short[] lengthOfString, String compressorName) {
     this.lengthOfString = lengthOfString;
     this.compressorName = compressorName;
   }
 
-  public byte[] getLengthOfString() {
+  public short[] getLengthOfString() {
     return lengthOfString;
   }
 
@@ -51,7 +51,7 @@ public class DirectStringEncoderMeta extends ColumnPageEncoderMeta implements Wr
   public void write(DataOutput out) throws IOException {
     // TODO: use RLE to compress lengthOfString instead of compressor
     Compressor compressor = CompressorFactory.getInstance().getCompressor();
-    byte[] compressed = compressor.compressByte(lengthOfString);
+    byte[] compressed = compressor.compressShort(lengthOfString);
     out.writeInt(compressed.length);
     out.write(compressed);
     out.writeUTF(compressorName);
@@ -64,6 +64,6 @@ public class DirectStringEncoderMeta extends ColumnPageEncoderMeta implements Wr
     in.readFully(compressed);
     this.compressorName = in.readUTF();
     Compressor compressor = CompressorFactory.getInstance().getCompressor(compressorName);
-    this.lengthOfString = compressor.unCompressByte(compressed);
+    this.lengthOfString = compressor.unCompressShort(compressed);
   }
 }
