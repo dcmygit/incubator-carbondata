@@ -56,6 +56,8 @@ public class AdaptiveDeltaIntegralCodec extends AdaptiveCodec {
       case SHORT:
         this.max = (short) stats.getMax();
         break;
+      case TIMESTAMP:
+      case DATE:
       case INT:
         this.max = (int) stats.getMax();
         break;
