@@ -62,6 +62,8 @@ public class UnsafeFixLengthColumnPage extends ColumnPage {
       case LONG:
       case FLOAT:
       case DOUBLE:
+      case TIMESTAMP:
+      case DATE:
         int size = pageSize << dataType.getSizeBits();
         memoryBlock = UnsafeMemoryManager.allocateMemoryWithRetry(taskId, size);
         baseAddress = memoryBlock.getBaseObject();
